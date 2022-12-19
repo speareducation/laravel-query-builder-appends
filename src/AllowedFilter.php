@@ -4,6 +4,7 @@ namespace Spatie\QueryBuilder;
 
 use Illuminate\Support\Collection;
 use Spatie\QueryBuilder\Filters\Filter;
+use Spatie\QueryBuilder\Filters\FiltersBeginsWithStrict;
 use Spatie\QueryBuilder\Filters\FiltersCallback;
 use Spatie\QueryBuilder\Filters\FiltersExact;
 use Spatie\QueryBuilder\Filters\FiltersPartial;
@@ -68,6 +69,13 @@ class AllowedFilter
         static::setFilterArrayValueDelimiter($arrayValueDelimiter);
 
         return new static($name, new FiltersPartial($addRelationConstraint), $internalName);
+    }
+
+    public static function beginsWithStrict(string $name, $internalName = null, bool $addRelationConstraint = true, string $arrayValueDelimiter = null): self
+    {
+        static::setFilterArrayValueDelimiter($arrayValueDelimiter);
+
+        return new static($name, new FiltersBeginsWithStrict($addRelationConstraint), $internalName);
     }
 
     public static function scope(string $name, $internalName = null, string $arrayValueDelimiter = null): self
@@ -145,7 +153,7 @@ class AllowedFilter
     protected function resolveValueForFiltering($value)
     {
         if (is_array($value)) {
-            $remainingProperties = array_diff_assoc($value, $this->ignored->toArray());
+            $remainingProperties = array_map([$this, 'resolveValueForFiltering'], $value);
 
             return ! empty($remainingProperties) ? $remainingProperties : null;
         }

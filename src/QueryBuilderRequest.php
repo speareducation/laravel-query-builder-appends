@@ -29,7 +29,7 @@ class QueryBuilderRequest extends Request
 
     public static function fromRequest(Request $request): self
     {
-        return static::createFrom($request, new self());
+        return static::createFrom($request, new static());
     }
 
     public function includes(): Collection
@@ -106,10 +106,14 @@ class QueryBuilderRequest extends Request
     /**
      * @param $value
      *
-     * @return array|bool
+     * @return array|bool|null
      */
     protected function getFilterValue($value)
     {
+        if (empty($value)) {
+            return $value;
+        }
+
         if (is_array($value)) {
             return collect($value)->map(function ($valueValue) {
                 return $this->getFilterValue($valueValue);

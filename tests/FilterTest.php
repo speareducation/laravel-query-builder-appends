@@ -130,6 +130,37 @@ test('falsy values are not ignored when applying a partial filter', function () 
     $this->assertQueryLogContains("select * from `test_models` where (LOWER(`test_models`.`id`) LIKE ?)");
 });
 
+test('falsy values are not ignored when applying a begins with strict filter', function () {
+    DB::enableQueryLog();
+
+    createQueryFromFilterRequest([
+            'id' => [0],
+        ])
+        ->allowedFilters(AllowedFilter::beginsWithStrict('id'))
+        ->get();
+
+    $this->assertQueryLogContains("select * from `test_models` where (`test_models`.`id` LIKE ?)");
+});
+
+it('can filter partial using begins with strict', function () {
+    TestModel::create([
+        'name' => 'John Doe',
+    ]);
+
+    $models = createQueryFromFilterRequest(['name' => 'john'])
+        ->allowedFilters([
+            AllowedFilter::beginsWithStrict('name'),
+        ]);
+
+    $models2 = createQueryFromFilterRequest(['name' => 'doe'])
+        ->allowedFilters([
+            AllowedFilter::beginsWithStrict('name'),
+        ]);
+
+    expect($models->count())->toBe(1);
+    expect($models2->count())->toBe(0);
+});
+
 it('can filter and match results by exact property', function () {
     $testModel = TestModel::first();
 
@@ -365,7 +396,20 @@ it('should apply the filter on the subset of allowed values', function () {
     $models = createQueryFromFilterRequest([
             'name' => 'John Deer,John Doe',
         ])
-        ->allowedFilters(AllowedFilter::exact('name')->ignore('John Deer'))
+        ->allowedFilters(AllowedFilter::exact('name')->ignore('John Doe'))
+        ->get();
+
+    expect($models)->toHaveCount(1);
+});
+
+it('should apply the filter on the subset of allowed values regardless of the keys order', function () {
+    TestModel::create(['id' => 6, 'name' => 'John Doe']);
+    TestModel::create(['id' => 7, 'name' => 'John Deer']);
+
+    $models = createQueryFromFilterRequest([
+            'id' => [ 7, 6 ],
+        ])
+        ->allowedFilters(AllowedFilter::exact('id')->ignore(6))
         ->get();
 
     expect($models)->toHaveCount(1);
@@ -429,6 +473,28 @@ it('does not apply default filter when filter exists and default is set', functi
             'name' => 'UniqueDoe',
         ])
         ->allowedFilters(AllowedFilter::partial('name')->default('UniqueJohn'))
+        ->get();
+
+    expect($models->count())->toEqual(1);
+});
+
+it('should apply a filter with a multi-dimensional array value', function () {
+    TestModel::create(['name' => 'John Doe']);
+
+    $models = createQueryFromFilterRequest(['conditions' => [[
+            'attribute' => 'name',
+            'operator' => '=',
+            'value' => 'John Doe',
+        ]]])
+        ->allowedFilters(AllowedFilter::callback('conditions', function ($query, $conditions) {
+            foreach ($conditions as $condition) {
+                $query->where(
+                    $condition['attribute'],
+                    $condition['operator'],
+                    $condition['value']
+                );
+            }
+        }))
         ->get();
 
     expect($models->count())->toEqual(1);
