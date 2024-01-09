@@ -1,5 +1,5 @@
 {
-    "name": "spatie/laravel-query-builder",
+    "name": "speareducation/laravel-query-builder-appends",
     "description": "Easily build Eloquent queries from API requests",
     "keywords": [
         "spatie",
